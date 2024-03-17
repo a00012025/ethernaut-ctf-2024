@@ -14,5 +14,8 @@
     "@ethereumjs/tx": "^5.2.1",
     "@ethereumjs/util": "^9.0.2",
     "viem": "^2.8.10"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.28"
   }
 }
