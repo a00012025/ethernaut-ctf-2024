@@ -1,0 +1,17 @@
+pri_key + h = -1
+pri_key = -1-h
+
+pubKey is a point
+R' = h*G + pubKey
+R  = 0 * G
+
+
+r = 1
+s = 1
+s1 = 1
+R' = h*G + pubKey
+
+
+(1, y) & (1, -y)
+h1*G + pubKey = (1, y)
+h2*G + pubKey = (1, -y)
