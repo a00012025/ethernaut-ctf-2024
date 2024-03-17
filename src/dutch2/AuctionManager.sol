@@ -12,6 +12,8 @@ contract AuctionManager {
     using FixedPointMathLib for uint128;
     using SafeTransferLib for ERC20;
 
+    event ProcessingBid(uint256 index);
+
     enum States {
         Created,
         Accepting,
@@ -76,15 +78,15 @@ contract AuctionManager {
 
     modifier checkState(States state, Auction storage auction) {
         if (block.timestamp < auction.time.start) {
-            if (state != States.Created) revert();
+            if (state != States.Created) revert("a");
         } else if (block.timestamp < auction.time.end) {
-            if (state != States.Accepting) revert();
+            if (state != States.Accepting) revert("b");
         } else if (auction.data.quoteLowest != type(uint128).max) {
-            if (state != States.Final) revert();
+            if (state != States.Final) revert("c");
         } else if (block.timestamp <= auction.time.end + 24 hours) {
-            if (state != States.Reveal) revert();
+            if (state != States.Reveal) revert("d");
         } else if (block.timestamp > auction.time.end + 24 hours) {
-            if (state != States.Void) revert();
+            if (state != States.Void) revert("e");
         } else {
             revert();
         }
@@ -216,9 +218,9 @@ contract AuctionManager {
     ) public checkState(States.Reveal, auctions[id]) {
         Auction storage auction = auctions[id];
         uint256 sellerPrivateKey = auction.data.privateKey;
-        if (sellerPrivateKey == 0) revert();
+        if (sellerPrivateKey == 0) revert("1");
 
-        if (indices.length != auction.bids.length) revert();
+        if (indices.length != auction.bids.length) revert("2");
 
         FinalData memory data = FinalData({
             resQuoteBase: auction.parameters.resQuoteBase,
@@ -234,13 +236,14 @@ contract AuctionManager {
         uint256[] memory bidSeen = new uint256[]((indices.length / 256) + 1);
 
         for (uint256 i; i < indices.length; i++) {
+            emit ProcessingBid(i);
             uint256 index = indices[i];
             BidEncrypted storage bid = auction.bids[index];
 
             uint256 mapIndex = index / 256;
             uint256 bitMap = bidSeen[mapIndex];
             uint256 bitIndex = 1 << (index % 256);
-            if (bitIndex == 1 & bitMap) revert();
+            if (bitIndex == 1 & bitMap) revert("3");
             bidSeen[mapIndex] = bitMap | bitIndex;
 
             Math.Point memory commonPoint = Math.mul(
@@ -254,7 +257,7 @@ contract AuctionManager {
 
             uint128 amountBase = uint128(uint256(decrypted >> 128));
 
-            // amountQuote * (2**128-1) // amountBase
+            // amountQuote * (2**128-1) / amountBase
             uint256 quotePerBase = bid.amountQuote.mulDivDown(
                 type(uint128).max,
                 amountBase
@@ -262,9 +265,9 @@ contract AuctionManager {
             // quotePerBase should be decreasing
             if (quotePerBase >= data.prevQuoteBase) {
                 if (quotePerBase == data.prevQuoteBase) {
-                    if (data.prevIndex > index) revert();
+                    if (data.prevIndex > index) revert("4");
                 } else {
-                    revert();
+                    revert("5");
                 }
             }
 
@@ -281,20 +284,22 @@ contract AuctionManager {
 
             data.baseFilled += amountBase;
             bid.baseAmountFilled = amountBase;
+            // after finalize got amount: amountQuote - baseAmountFilled*quoteLowest/baseLowest
         }
 
+        // condition: quote * (2**128-1) / base == last amountQuote * (2**128-1) / amountBase
         if (quote.mulDivDown(type(uint128).max, base) != data.prevQuoteBase)
-            revert();
+            revert("6");
 
         for (uint256 i; i < bidSeen.length - 1; i++) {
-            if (bidSeen[i] != type(uint256).max) revert();
+            if (bidSeen[i] != type(uint256).max) revert("7");
         }
 
         if (((1 << (indices.length % 256)) - 1) != bidSeen[bidSeen.length - 1])
-            revert();
+            revert("8");
 
         if (data.baseFilled > data.totalBase) {
-            revert();
+            revert("9");
         }
 
         if (data.totalBase != data.baseFilled) {
@@ -305,8 +310,11 @@ contract AuctionManager {
             );
         }
 
+        // seller got: quote * baseFilled / base
+        // Target: > baseAmountFilled * quoteLowest / baseLowest
         ERC20(auction.parameters.tokenQuote).safeTransfer(
             auction.data.seller,
+            // why this???
             quote.mulDivDown(data.baseFilled, base)
         );
     }
@@ -356,6 +364,7 @@ contract AuctionManager {
             );
             bid.amountQuote = 0;
 
+            // possible exploit?
             ERC20(auction.parameters.tokenQuote).safeTransfer(
                 msg.sender,
                 bid.amountQuote - quoteBought
